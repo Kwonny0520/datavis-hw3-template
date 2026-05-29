@@ -184,7 +184,7 @@ function App() {
                       data={chartData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60} // 안쪽이 뚫린 도넛 모양으로 변경 (꽉 찬 파이를 원하면 0으로)
+                      innerRadius={60}
                       outerRadius={90}
                       paddingAngle={2}
                       dataKey="value"
