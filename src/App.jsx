@@ -1,207 +1,223 @@
 import { useState, useMemo } from 'react';
-import Slider from 'rc-slider';
-import 'rc-slider/assets/index.css';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import uiConfig from './ui.json';
-import { dummyData } from './dummyData';
+import { useState, useEffect, useMemo } from 'react';
+
+const CLASS_COLORS = [
+  '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+  '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+];
 
 function App() {
-  const [selectedStation, setSelectedStation] = useState(null);
-  
-  const [filters, setFilters] = useState({
-    timePeriodStart: 0,
-    timePeriodEnd: 24,
-    dayType: ['weekday', 'weekend'],
-    ageGroups: ['adult', 'student', 'teen', 'child', 'privileged']
-  });
+  const [items, setItems] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
 
-  const uiMap = useMemo(() => {
-    const map = {};
-    uiConfig.forEach(item => map[item.id] = item);
-    return map;
+  useEffect(() => {
+    fetch('predictions.json')
+      .then((response) => response.json())
+      .then((jsonData) => {
+        setItems(jsonData);
+      })
+      .catch((error) => {
+        console.error('Error loading JSON file:', error);
+      });
   }, []);
 
-  const toggleFilterArray = (key, value) => {
-    setFilters(prev => {
-      const current = prev[key];
-      if (current.includes(value)) return { ...prev, [key]: current.filter(v => v !== value) };
-      return { ...prev, [key]: [...current, value] };
-    });
-  };
+  const selectedItem = useMemo(() => {
+    if (selectedId === null) return null;
+    return items.find(item => item.id === selectedId) || null;
+  }, [items, selectedId]);
 
-  const renderUI = (id) => {
-    const item = uiMap[id];
-    if (!item) return null;
+  const { minX, maxX, minY, maxY } = useMemo(() => {
+    if (items.length === 0) return { minX: 0, maxX: 1, minY: 0, maxY: 1 };
+    return {
+      minX: Math.min(...items.map(d => d.x)),
+      maxX: Math.max(...items.map(d => d.x)),
+      minY: Math.min(...items.map(d => d.y)),
+      maxY: Math.max(...items.map(d => d.y)),
+    };
+  }, [items]);
 
-    if (item.id === 'time-period-range') {
-      return (
-        <div key={id} style={{ width: '100%', padding: '10px 5px', marginBottom: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '15px', fontWeight: 'bold', color: '#007bff' }}>
-            <span>{String(filters.timePeriodStart).padStart(2, '0')}:00</span>
-            <span style={{ color: '#ccc' }}>~</span>
-            <span>{String(filters.timePeriodEnd).padStart(2, '0')}:00</span>
-          </div>
-          <Slider
-            range min={0} max={24} allowCross={false}
-            value={[filters.timePeriodStart, filters.timePeriodEnd]}
-            onChange={(values) => setFilters(prev => ({ ...prev, timePeriodStart: values[0], timePeriodEnd: values[1] }))}
-            trackStyle={[{ backgroundColor: '#007bff' }]}
-            handleStyle={[{ borderColor: '#007bff', backgroundColor: '#fff' }, { borderColor: '#007bff', backgroundColor: '#fff' }]}
-          />
-        </div>
-      );
-    }
+  const projWidth = 500;
+  const projHeight = 500;
+  const projPadding = 30;
 
-    switch (item.component) {
-      case 'Column': return <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: '20px', ...item.style }}>{item.children?.map(renderUI)}</div>;
-      case 'Row': return <div key={id} style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>{item.children?.map(renderUI)}</div>;
-      case 'Text': 
-        const isHeader = item.variant === 'h3';
-        return <div key={id} style={{ fontWeight: isHeader ? 'bold' : 'normal', fontSize: isHeader ? '18px' : '14px', color: isHeader ? '#111' : '#666' }}>{item.text}</div>;
-      case 'ChoicePicker':
-        const stateKey = item.value.path.includes('dayType') ? 'dayType' : 'ageGroups';
-        return (
-          <div key={id} style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-            {item.options?.map(opt => {
-              const isChecked = filters[stateKey].includes(opt.value);
-              return (
-                <label key={opt.value} style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', backgroundColor: isChecked ? '#e6f2ff' : '#f0f0f0', padding: '6px 12px', borderRadius: '20px', border: isChecked ? '1px solid #007bff' : '1px solid transparent' }}>
-                  <input type="checkbox" checked={isChecked} onChange={() => toggleFilterArray(stateKey, opt.value)} style={{ display: 'none' }} />
-                  {opt.label}
-                </label>
-              );
-            })}
-          </div>
-        );
-      default: return null;
-    }
-  };
+  const scaleX = (x) => projPadding + ((x - minX) / (maxX - minX || 1)) * (projWidth - projPadding * 2);
+  const scaleY = (y) => projPadding + ((maxY - y) / (maxY - minY || 1)) * (projHeight - projPadding * 2);
 
-  const currentData = selectedStation ? dummyData[selectedStation] : null;
-  let totalVisitors = 0;
-  let ageBreakdown = { adult: 0, student: 0, teen: 0, child: 0, privileged: 0 };
+  const numClasses = 10;
+  const scoreWidth = 800;
+  const scoreHeight = 800;
+  const rowHeight = scoreHeight / numClasses;
+  const scorePaddingX = 140;
+  const scorePaddingRight = 40;
 
-  if (currentData) {
-    currentData.hourlyData.forEach(row => {
-      if (row.hour >= filters.timePeriodStart && row.hour < filters.timePeriodEnd) {
-        filters.dayType.forEach(day => {
-          filters.ageGroups.forEach(age => {
-            const count = row[day][age] || 0;
-            totalVisitors += count;
-            ageBreakdown[age] += count;
-          });
-        });
-      }
-    });
-  }
+  const scaleConfidence = (conf) => scorePaddingX + conf * (scoreWidth - scorePaddingX - scorePaddingRight);
 
-  const getKoreanAge = (age) => ({ adult: '일반', student: '중고생', teen: '청소년', child: '아동', privileged: '우대권' }[age]);
-  
-  const chartData = filters.ageGroups
-    .map(age => ({ name: getKoreanAge(age), value: ageBreakdown[age] }))
-    .filter(data => data.value > 0);
-
-  const COLORS = { '일반': '#0088FE', '중고생': '#00C49F', '청소년': '#FFBB28', '아동': '#FF8042', '우대권': '#A28DFF' };
-
-  const renderMarker = (id, label, cx, cy) => {
-    const isSelected = selectedStation === id;
-    const isNone = selectedStation === null;
-    const fill = isNone ? '#333' : (isSelected ? '#ff4d4f' : '#aaa');
-    const radius = isNone ? '18' : (isSelected ? '24' : '15');
-    const opacity = isNone ? '0.8' : (isSelected ? '1' : '0.5');
-
-    return (
-      <g key={id} style={{ pointerEvents: 'auto', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSelectedStation(id); }}>
-        <circle cx={cx} cy={cy} r={radius} fill={fill} opacity={opacity} stroke="#fff" strokeWidth="2" style={{ transition: 'all 0.3s' }} />
-        <text x={cx} y={cy} dy="40" textAnchor="middle" fill={isNone || isSelected ? '#fff' : '#666'} style={{ fontWeight: 'bold', fontSize: '15px', textShadow: isNone || isSelected ? 'none' : '1px 1px 2px #fff' }}>{label}</text>
-      </g>
-    );
-  };
+  const itemsWithJitter = useMemo(() => {
+    return items.map(item => ({
+      ...item,
+      jitterY: (Math.random() - 0.5) * 16
+    }));
+  }, [items]);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw', margin: 0, fontFamily: 'sans-serif' }}>
-      
-      <div style={{ flex: 1, padding: '20px', borderRight: '1px solid #ddd', minWidth: '280px', backgroundColor: '#fff', overflowY: 'auto' }}>
-        {renderUI('options-column')}
-      </div>
-
-      <div style={{ flex: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#e9ecef', position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 20, left: 20, backgroundColor: '#fff', padding: '10px 20px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', fontWeight: 'bold', zIndex: 10 }}>
-          {selectedStation ? `📍 ${currentData.name}` : '지도에서 역을 선택해주세요'}
-        </div>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; margin: 0; color: #333; }
+        h1 { text-align: center; padding: 15px 0; background: white; margin: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; z-index: 10; font-size: 24px; color: #1a1a2e; }
+        #container { display: flex; height: calc(100vh - 65px); padding: 20px; gap: 20px; width: 100vw; }
+        #sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 380px; max-width: 450px; }
+        #main-section { flex: 2; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .view-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .view-title { font-weight: 600; font-size: 18px; border-bottom: 2px solid #f0f0f5; padding-bottom: 12px; margin-bottom: 15px; color: #2b2d42; display: flex; align-items: center; }
+        .view-title::before { content: ''; display: inline-block; width: 6px; height: 18px; background: #4361ee; border-radius: 4px; margin-right: 10px; }
         
-        <div style={{ position: 'relative', width: '90%', height: '90%' }}>
-          <img src="https://www.jiraksil.com/files/service_meta/quiz_20240402_660bcf51735f7.jpg" alt="Map" onClick={() => setSelectedStation(null)} style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', cursor: 'default' }} />
-          
-          <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
-            {renderMarker('stationA', '강남역', '60%', '65%')}
-            {renderMarker('stationB', '홍대입구역', '35%', '45%')}
-            {renderMarker('stationC', '잠실역', '75%', '60%')}
-            {renderMarker('stationD', '성수역', '60%', '45%')}
-            {renderMarker('stationE', '이태원역', '50%', '55%')}
-          </svg>
-        </div>
-      </div>
+        svg.projection-svg { width: 100%; height: 100%; min-height: 350px; background: transparent; border: none; }
+        svg.score-svg { width: 100%; height: 100%; background: transparent; border: none; }
+        
+        #selected-image-info-content { flex: 1; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 24px; color: #333; padding: 10px; }
+        .selected-image-wrapper { width: 110px; height: 110px; background: #fff; display: flex; justify-content: center; align-items: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
+        .selected-image-wrapper img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+        .selected-details { display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
 
-      <div style={{ flex: 2, padding: '30px', borderLeft: '1px solid #ddd', minWidth: '360px', backgroundColor: '#fff', overflowY: 'auto' }}>
-        {!selectedStation ? (
-          <div style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#999' }}>
-            <div style={{ fontSize: '40px', marginBottom: '15px' }}>📍</div>
-            <h3 style={{ margin: 0 }}>역을 선택해주세요</h3>
+        .placeholder-text { color: #888; font-size: 15px; text-align: center; width: 100%; padding: 30px; border: 1px dashed #ccc; border-radius: 8px; background: #fafafa; }
+      `}</style>
+
+      <h1>Data Visualization HW 3 Sample</h1>
+
+      <div id="container">
+        <div id="sidebar">
+          <div id="projection-view" className="view-panel" style={{ flex: 1.6 }}>
+            <div className="view-title">Projection View</div>
+            <svg className="projection-svg" viewBox={`0 0 ${projWidth} ${projHeight}`} preserveAspectRatio="xMidYMid meet">
+              {items.map(item => {
+                const cx = scaleX(item.x);
+                const cy = scaleY(item.y);
+                const isSelected = selectedId === item.id;
+                const isOtherSelected = selectedId !== null && !isSelected;
+
+                return (
+                  <circle
+                    key={item.id}
+                    cx={cx}
+                    cy={cy}
+                    r={isSelected ? 10 : 5}
+                    fill={CLASS_COLORS[item.predicted]}
+                    opacity={isSelected ? 1 : (isOtherSelected ? 0.1 : 0.6)}
+                    stroke={isSelected ? "#333" : "white"}
+                    strokeWidth={isSelected ? 2 : 0.5}
+                    style={{ cursor: 'pointer', transition: 'r 0.2s, opacity 0.2s' }}
+                    onMouseEnter={() => setSelectedId(item.id)}
+                    onMouseLeave={() => setSelectedId(null)}
+                  />
+                );
+              })}
+            </svg>
           </div>
-        ) : (
-          <>
-            <h2 style={{ borderBottom: '3px solid #333', paddingBottom: '15px', marginTop: 0 }}>{currentData.name}</h2>
-            
-            <div style={{ marginTop: '20px', backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px' }}>
-              <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>조건 반영 합산 방문객</p>
-              <p style={{ margin: '5px 0 0 0', fontSize: '36px', fontWeight: 'bold', color: '#007bff' }}>
-                {totalVisitors.toLocaleString()} <span style={{ fontSize: '18px', color: '#333' }}>명</span>
-              </p>
-            </div>
 
-            <div style={{ marginTop: '20px' }}>
-              <h3 style={{ fontSize: '15px', marginBottom: '10px', color: '#444' }}>유사 패턴 역</h3>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {currentData.similar.map(simId => (
-                  <span key={simId} style={{ padding: '6px 10px', backgroundColor: '#e9ecef', borderRadius: '6px', fontSize: '13px', color: '#333', cursor: 'pointer' }} onClick={() => setSelectedStation(simId)}>
-                    {dummyData[simId].name}
-                  </span>
-                ))}
-              </div>
-            </div>
-            
-            <div style={{ marginTop: '30px', height: '300px' }}>
-              <h3 style={{ fontSize: '15px', marginBottom: '5px', color: '#444' }}>연령대 구성비 (선택 시간대 기준)</h3>
-              {chartData.length === 0 ? (
-                <p style={{ color: '#999', fontSize: '14px', marginTop: '20px' }}>데이터가 없습니다.</p>
+          <div id="selected-image-info" className="view-panel" style={{ flex: 1, minHeight: '180px' }}>
+            <div className="view-title">Selected Image</div>
+            <div id="selected-image-info-content">
+              {selectedItem ? (
+                <>
+                  <div className="selected-image-wrapper">
+                    <img src={`images/image-${selectedItem.id}.png`} alt={`ID: ${selectedItem.id}`} />
+                  </div>
+                  <div className="selected-details">
+                    <div><strong>ID:</strong> {selectedItem.id}</div>
+                    <div><strong>Labeled as:</strong> {selectedItem.label}</div>
+                    <div><strong>Predicted as:</strong> {selectedItem.predicted} (Confidence: {selectedItem.confidence.toFixed(3)})</div>
+                  </div>
+                </>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value.toLocaleString()}명`, '방문객']} />
-                    <Legend verticalAlign="bottom" height={36} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="placeholder-text">Hover over a dot in the Projection View</div>
               )}
             </div>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
 
-    </div>
+        <div id="main-section">
+          <div style={{ padding: '20px 20px 0 20px' }}>
+            <div className="view-title">Score Distributions</div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px 20px' }}>
+            <svg className="score-svg" viewBox={`0 0 ${scoreWidth} ${scoreHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minHeight: '600px' }}>
+              {/* X-Axis labels for confidence */}
+              <g transform="translate(0, 25)">
+                {[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(val => (
+                  <g key={val} transform={`translate(${scaleConfidence(val)}, 0)`}>
+                    <line y2="8" stroke="#ccc" />
+                    <text y="22" textAnchor="middle" fontSize="12" fill="#888">{val.toFixed(1)}</text>
+                  </g>
+                ))}
+                <line x1={scaleConfidence(0)} x2={scaleConfidence(1)} y1="0" y2="0" stroke="#ccc" strokeWidth="1" />
+              </g>
+
+              {/* Rows for each class */}
+              {Array.from({ length: numClasses }).map((_, classIndex) => {
+                const rowY = 50 + classIndex * (rowHeight * 0.9);
+                const isSelectedRow = selectedItem && selectedItem.label === classIndex;
+
+                return (
+                  <g key={classIndex} transform={`translate(0, ${rowY})`}>
+
+                    {/* Bounding box if this row corresponds to selected item's true label */}
+                    {isSelectedRow && (
+                      <rect
+                        x="0"
+                        y="5"
+                        width={scoreWidth}
+                        height={rowHeight * 0.9 - 10}
+                        fill="rgba(67, 97, 238, 0.03)"
+                        stroke="#333"
+                        strokeWidth="1.5"
+                        rx="4"
+                      />
+                    )}
+
+                    {/* Row Label Area */}
+                    <g transform={`translate(10, ${(rowHeight * 0.9) / 2 - 12})`}>
+                      <rect x="0" y="-14" width="55" height="22" rx="4" fill={CLASS_COLORS[classIndex]} />
+                      <text x="27.5" y="2" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">Class {classIndex}</text>
+
+                      <text x="0" y="20" fontSize="11" fill="#666">Labeled as {classIndex}</text>
+                      <text x="0" y="34" fontSize="11" fill="#666">Predicted as {classIndex}</text>
+                    </g>
+
+                    {/* Strip plot line for the row */}
+                    <line x1={scorePaddingX} x2={scaleConfidence(1)} y1={(rowHeight * 0.9) / 2} y2={(rowHeight * 0.9) / 2} stroke="#f0f0f5" strokeWidth="2" />
+
+                    {/* Data points (squares) */}
+                    {itemsWithJitter.filter(d => d.label === classIndex).map(d => {
+                      const isSelectedPoint = selectedItem && selectedItem.id === d.id;
+                      const cx = scaleConfidence(d.confidence);
+                      const cy = (rowHeight * 0.9) / 2 + d.jitterY;
+
+                      return (
+                        <rect
+                          key={d.id}
+                          x={cx - (isSelectedPoint ? 6 : 3)}
+                          y={cy - (isSelectedPoint ? 6 : 3)}
+                          width={isSelectedPoint ? 12 : 6}
+                          height={isSelectedPoint ? 12 : 6}
+                          fill={CLASS_COLORS[d.predicted]}
+                          opacity={isSelectedPoint ? 1 : 0.3}
+                          stroke={isSelectedPoint ? "#000" : "none"}
+                          strokeWidth={isSelectedPoint ? 2 : 0}
+                          style={{ cursor: 'pointer', transition: 'all 0.1s' }}
+                          onMouseEnter={() => setSelectedId(d.id)}
+                          onMouseLeave={() => setSelectedId(null)}
+                        />
+                      );
+                    })}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
