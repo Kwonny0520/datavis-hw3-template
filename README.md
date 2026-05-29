@@ -4,9 +4,9 @@
 You must fill out the following form. Please see LearnUs for detailed instructions. Also, please don't forget to update the `LLM_USAGE.md` file.
 
 ---
-- Name: __________
-- Student ID number: __________
-- URL to video demo: https://..........
+- Name: Hong Eui Kwon
+- Student ID number: 2022148001
+- URL to video demo: https://www.youtube.com/watch?v=l_rBzGjztoA
 - Optional Comments:
 ---
 
