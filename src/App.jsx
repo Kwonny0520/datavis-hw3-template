@@ -61,6 +61,27 @@ function App() {
 
   return (
     <>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; margin: 0; color: #333; }
+        h1 { text-align: center; padding: 15px 0; background: white; margin: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; z-index: 10; font-size: 24px; color: #1a1a2e; }
+        #container { display: flex; height: calc(100vh - 65px); padding: 20px; gap: 20px; width: 100vw; }
+        #sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 380px; max-width: 450px; }
+        #main-section { flex: 2; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .view-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .view-title { font-weight: 600; font-size: 18px; border-bottom: 2px solid #f0f0f5; padding-bottom: 12px; margin-bottom: 15px; color: #2b2d42; display: flex; align-items: center; }
+        .view-title::before { content: ''; display: inline-block; width: 6px; height: 18px; background: #4361ee; border-radius: 4px; margin-right: 10px; }
+        
+        svg.projection-svg { width: 100%; height: 100%; min-height: 350px; background: transparent; border: none; }
+        svg.score-svg { width: 100%; height: 100%; background: transparent; border: none; }
+        
+        #selected-image-info-content { flex: 1; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 24px; color: #333; padding: 10px; }
+        .selected-image-wrapper { width: 110px; height: 110px; background: #fff; display: flex; justify-content: center; align-items: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
+        .selected-image-wrapper img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+        .selected-details { display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+
+        .placeholder-text { color: #888; font-size: 15px; text-align: center; width: 100%; padding: 30px; border: 1px dashed #ccc; border-radius: 8px; background: #fafafa; }
+      `}</style>
 
       <h1>Data Visualization HW 3 Sample</h1>
 
