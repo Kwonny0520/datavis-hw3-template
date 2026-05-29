@@ -61,27 +61,6 @@ function App() {
 
   return (
     <>
-      <style>{`
-        * { box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; margin: 0; color: #333; }
-        h1 { text-align: center; padding: 15px 0; background: white; margin: 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: relative; z-index: 10; font-size: 24px; color: #1a1a2e; }
-        #container { display: flex; height: calc(100vh - 65px); padding: 20px; gap: 20px; width: 100vw; }
-        #sidebar { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 380px; max-width: 450px; }
-        #main-section { flex: 2; display: flex; flex-direction: column; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .view-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-        .view-title { font-weight: 600; font-size: 18px; border-bottom: 2px solid #f0f0f5; padding-bottom: 12px; margin-bottom: 15px; color: #2b2d42; display: flex; align-items: center; }
-        .view-title::before { content: ''; display: inline-block; width: 6px; height: 18px; background: #4361ee; border-radius: 4px; margin-right: 10px; }
-        
-        svg.projection-svg { width: 100%; height: 100%; min-height: 350px; background: transparent; border: none; }
-        svg.score-svg { width: 100%; height: 100%; background: transparent; border: none; }
-        
-        #selected-image-info-content { flex: 1; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 24px; color: #333; padding: 10px; }
-        .selected-image-wrapper { width: 110px; height: 110px; background: #fff; display: flex; justify-content: center; align-items: center; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); flex-shrink: 0; }
-        .selected-image-wrapper img { width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
-        .selected-details { display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
-
-        .placeholder-text { color: #888; font-size: 15px; text-align: center; width: 100%; padding: 30px; border: 1px dashed #ccc; border-radius: 8px; background: #fafafa; }
-      `}</style>
 
       <h1>Data Visualization HW 3 Sample</h1>
 
@@ -142,7 +121,7 @@ function App() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px 20px' }}>
             <svg className="score-svg" viewBox={`0 0 ${scoreWidth} ${scoreHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minHeight: '600px' }}>
-              {/* X-Axis labels for confidence */}
+
               <g transform="translate(0, 25)">
                 {[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(val => (
                   <g key={val} transform={`translate(${scaleConfidence(val)}, 0)`}>
@@ -153,7 +132,7 @@ function App() {
                 <line x1={scaleConfidence(0)} x2={scaleConfidence(1)} y1="0" y2="0" stroke="#ccc" strokeWidth="1" />
               </g>
 
-              {/* Rows for each class */}
+
               {Array.from({ length: numClasses }).map((_, classIndex) => {
                 const rowY = 50 + classIndex * (rowHeight * 0.9);
                 const isSelectedRow = selectedItem && selectedItem.label === classIndex;
@@ -161,7 +140,7 @@ function App() {
                 return (
                   <g key={classIndex} transform={`translate(0, ${rowY})`}>
 
-                    {/* Bounding box if this row corresponds to selected item's true label */}
+
                     {isSelectedRow && (
                       <rect
                         x="0"
@@ -175,7 +154,7 @@ function App() {
                       />
                     )}
 
-                    {/* Row Label Area */}
+
                     <g transform={`translate(10, ${(rowHeight * 0.9) / 2 - 12})`}>
                       <rect x="0" y="-14" width="55" height="22" rx="4" fill={CLASS_COLORS[classIndex]} />
                       <text x="27.5" y="2" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">Class {classIndex}</text>
@@ -184,10 +163,9 @@ function App() {
                       <text x="0" y="34" fontSize="11" fill="#666">Predicted as {classIndex}</text>
                     </g>
 
-                    {/* Strip plot line for the row */}
                     <line x1={scorePaddingX} x2={scaleConfidence(1)} y1={(rowHeight * 0.9) / 2} y2={(rowHeight * 0.9) / 2} stroke="#f0f0f5" strokeWidth="2" />
 
-                    {/* Data points (squares) */}
+
                     {itemsWithJitter.filter(d => d.label === classIndex).map(d => {
                       const isSelectedPoint = selectedItem && selectedItem.id === d.id;
                       const cx = scaleConfidence(d.confidence);
