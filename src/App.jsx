@@ -97,12 +97,10 @@ function App() {
 
   const getKoreanAge = (age) => ({ adult: '일반', student: '중고생', teen: '청소년', child: '아동', privileged: '우대권' }[age]);
   
-  // 파이 차트용 데이터 배열 생성 (선택된 연령대만, 0명인 것 제외)
   const chartData = filters.ageGroups
     .map(age => ({ name: getKoreanAge(age), value: ageBreakdown[age] }))
     .filter(data => data.value > 0);
 
-  // 연령대별 차트 색상 지정
   const COLORS = { '일반': '#0088FE', '중고생': '#00C49F', '청소년': '#FFBB28', '아동': '#FF8042', '우대권': '#A28DFF' };
 
   const renderMarker = (id, label, cx, cy) => {
