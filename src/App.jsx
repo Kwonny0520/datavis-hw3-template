@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 
 const CLASS_COLORS = [
@@ -19,6 +18,7 @@ function App() {
       .catch((error) => {
         console.error('Error loading JSON file:', error);
       });
+
   }, []);
 
   const selectedItem = useMemo(() => {
@@ -58,6 +58,7 @@ function App() {
       jitterY: (Math.random() - 0.5) * 16
     }));
   }, [items]);
+
 
   return (
     <>
@@ -115,6 +116,16 @@ function App() {
             </svg>
           </div>
 
+
+
+
+
+
+
+
+
+
+
           <div id="selected-image-info" className="view-panel" style={{ flex: 1, minHeight: '180px' }}>
             <div className="view-title">Selected Image</div>
             <div id="selected-image-info-content">
@@ -129,12 +140,32 @@ function App() {
                     <div><strong>Predicted as:</strong> {selectedItem.predicted} (Confidence: {selectedItem.confidence.toFixed(3)})</div>
                   </div>
                 </>
+
               ) : (
                 <div className="placeholder-text">Hover over a dot in the Projection View</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
               )}
             </div>
           </div>
         </div>
+
 
         <div id="main-section">
           <div style={{ padding: '20px 20px 0 20px' }}>
@@ -142,7 +173,7 @@ function App() {
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px 20px' }}>
             <svg className="score-svg" viewBox={`0 0 ${scoreWidth} ${scoreHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minHeight: '600px' }}>
-
+              {/* X-Axis labels for confidence */}
               <g transform="translate(0, 25)">
                 {[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0].map(val => (
                   <g key={val} transform={`translate(${scaleConfidence(val)}, 0)`}>
@@ -153,7 +184,7 @@ function App() {
                 <line x1={scaleConfidence(0)} x2={scaleConfidence(1)} y1="0" y2="0" stroke="#ccc" strokeWidth="1" />
               </g>
 
-
+              {/* Rows for each class */}
               {Array.from({ length: numClasses }).map((_, classIndex) => {
                 const rowY = 50 + classIndex * (rowHeight * 0.9);
                 const isSelectedRow = selectedItem && selectedItem.label === classIndex;
@@ -161,7 +192,7 @@ function App() {
                 return (
                   <g key={classIndex} transform={`translate(0, ${rowY})`}>
 
-
+                    {/* Bounding box if this row corresponds to selected item's true label */}
                     {isSelectedRow && (
                       <rect
                         x="0"
@@ -175,7 +206,7 @@ function App() {
                       />
                     )}
 
-
+                    {/* Row Label Area */}
                     <g transform={`translate(10, ${(rowHeight * 0.9) / 2 - 12})`}>
                       <rect x="0" y="-14" width="55" height="22" rx="4" fill={CLASS_COLORS[classIndex]} />
                       <text x="27.5" y="2" textAnchor="middle" fill="white" fontSize="13" fontWeight="bold">Class {classIndex}</text>
@@ -184,9 +215,10 @@ function App() {
                       <text x="0" y="34" fontSize="11" fill="#666">Predicted as {classIndex}</text>
                     </g>
 
+                    {/* Strip plot line for the row */}
                     <line x1={scorePaddingX} x2={scaleConfidence(1)} y1={(rowHeight * 0.9) / 2} y2={(rowHeight * 0.9) / 2} stroke="#f0f0f5" strokeWidth="2" />
 
-
+                    {/* Data points (squares) */}
                     {itemsWithJitter.filter(d => d.label === classIndex).map(d => {
                       const isSelectedPoint = selectedItem && selectedItem.id === d.id;
                       const cx = scaleConfidence(d.confidence);
@@ -219,5 +251,3 @@ function App() {
     </>
   );
 }
-
-export default App;
