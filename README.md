@@ -6,7 +6,7 @@ You must fill out the following form. Please see LearnUs for detailed instructio
 ---
 - Name: Hong Eui Kwon
 - Student ID number: 2022148001
-- URL to video demo: https://www.youtube.com/watch?v=l_rBzGjztoA
+- URL to video demo: https://www.youtube.com/watch?v=7vgOeGmWxqo
 - Optional Comments:
 ---
 
